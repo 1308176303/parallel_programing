@@ -105,12 +105,12 @@ void test(int n, int repeat) {
 }
 
 int main() {
-    const int n = 50;  // 固定数组大小为7000
+    const int n = 7000;  
     
     cout << "========== 矩阵列与向量内积计算 ==========" << endl;
     
     // 测试矩阵向量内积算法
-    test(n, 100);  
+    test(n, 5);  
     
     return 0;
 }
