@@ -5,6 +5,7 @@
 #include <chrono>
 #include <iomanip>
 #include <cmath>
+#include <vector>
 
 using namespace std;
 
@@ -125,7 +126,7 @@ void muld(double** matrix, double* vector, double* result, int n) {
 }
 
 // 测试基础矩阵乘法：平凡算法与Cache优化对比
-void test_basic_mul(int* sizes, int sizes_count, int test_count, const char* output_file) {
+void test_basic_mul(int* sizes, int* test_counts, int sizes_count, const char* output_file) {
     ofstream out_file(output_file);
     if (!out_file.is_open()) {
         cout << "无法创建文件: " << output_file << endl;
@@ -136,12 +137,13 @@ void test_basic_mul(int* sizes, int sizes_count, int test_count, const char* out
     out_file << "矩阵大小,平凡算法(秒),Cache优化(秒),加速比,结果正确性" << endl;
     
     // 控制台表头
-    cout << "\n基础矩阵乘法算法性能比较 (每规模测试" << test_count << "次):" << endl;
+    cout << "\n基础矩阵乘法算法性能比较:" << endl;
     cout << "规模\t平凡算法(秒)\tCache优化(秒)\t加速比\t结果正确性" << endl;
     cout << "------\t-----------\t-----------\t------\t----------" << endl;
     
     for (int i = 0; i < sizes_count; i++) {
         int n = sizes[i];
+        int test_count = test_counts[i];
         cout << "测试矩阵大小: " << n << "x" << n << " (" << test_count << "次)" << endl;
         
         // 分配内存
@@ -155,13 +157,6 @@ void test_basic_mul(int* sizes, int sizes_count, int test_count, const char* out
         
         // 生成测试数据
         generate_data(matrix, vector, n);
-        
-        // 调整迭代次数，对大规模数据减少迭代
-        int actual_test_count = test_count;
-        if (n > 1000) actual_test_count = (test_count > 20) ? 20 : test_count;
-        if (n > 5000) actual_test_count = (test_count > 10) ? 10 : test_count;
-        
-        cout << "  调整后测试次数: " << actual_test_count << endl;
         
         // 验证结果是否正确（只需验证一次）
         mula(matrix, vector, result_naive, n);
@@ -177,27 +172,27 @@ void test_basic_mul(int* sizes, int sizes_count, int test_count, const char* out
         
         // 测试平凡算法 - 累计所有测试时间
         double total_time_naive = 0.0;
-        for (int t = 0; t < actual_test_count; t++) {
+        for (int t = 0; t < test_count; t++) {
             double start_time = get_time();
             mula(matrix, vector, result_naive, n);
             total_time_naive += (get_time() - start_time);
             
             // 输出进度
-            if ((t+1) % 10 == 0 || t == actual_test_count-1) {
-                cout << "  平凡算法进度: " << t+1 << "/" << actual_test_count << endl;
+            if ((t+1) % 10 == 0 || t == test_count-1) {
+                cout << "  平凡算法进度: " << t+1 << "/" << test_count << endl;
             }
         }
         
         // 测试Cache优化算法 - 累计所有测试时间
         double total_time_cache = 0.0;
-        for (int t = 0; t < actual_test_count; t++) {
+        for (int t = 0; t < test_count; t++) {
             double start_time = get_time();
             mulb(matrix, vector, result_cache, n);
             total_time_cache += (get_time() - start_time);
             
             // 输出进度
-            if ((t+1) % 10 == 0 || t == actual_test_count-1) {
-                cout << "  Cache优化算法进度: " << t+1 << "/" << actual_test_count << endl;
+            if ((t+1) % 10 == 0 || t == test_count-1) {
+                cout << "  Cache优化算法进度: " << t+1 << "/" << test_count << endl;
             }
         }
         
@@ -235,7 +230,7 @@ void test_basic_mul(int* sizes, int sizes_count, int test_count, const char* out
 }
 
 // 测试进阶矩阵乘法：平凡算法与循环展开算法对比
-void test_advanced_mul(int* sizes, int sizes_count, int test_count, const char* output_file) {
+void test_advanced_mul(int* sizes, int* test_counts, int sizes_count, const char* output_file) {
     ofstream out_file(output_file);
     if (!out_file.is_open()) {
         cout << "无法创建文件: " << output_file << endl;
@@ -246,12 +241,13 @@ void test_advanced_mul(int* sizes, int sizes_count, int test_count, const char* 
     out_file << "矩阵大小,平凡算法(秒),4路展开(秒),8路展开(秒),4路展开加速比,8路展开加速比,结果正确性" << endl;
     
     // 控制台表头
-    cout << "\n进阶矩阵乘法算法性能比较 (每规模测试" << test_count << "次):" << endl;
+    cout << "\n进阶矩阵乘法算法性能比较:" << endl;
     cout << "规模\t平凡算法(秒)\t4路展开(秒)\t8路展开(秒)\t4路加速比\t8路加速比\t结果正确性" << endl;
     cout << "------\t-----------\t-----------\t-----------\t----------\t----------\t----------" << endl;
     
     for (int i = 0; i < sizes_count; i++) {
         int n = sizes[i];
+        int test_count = test_counts[i];
         cout << "测试矩阵大小: " << n << "x" << n << " (" << test_count << "次)" << endl;
         
         // 分配内存
@@ -266,13 +262,6 @@ void test_advanced_mul(int* sizes, int sizes_count, int test_count, const char* 
         
         // 生成测试数据
         generate_data(matrix, vector, n);
-        
-        // 调整迭代次数，对大规模数据减少迭代
-        int actual_test_count = test_count;
-        if (n > 1000) actual_test_count = (test_count > 20) ? 20 : test_count;
-        if (n > 5000) actual_test_count = (test_count > 10) ? 10 : test_count;
-        
-        cout << "  调整后测试次数: " << actual_test_count << endl;
         
         // 验证结果是否正确（只需验证一次）
         mula(matrix, vector, result_naive, n);
@@ -293,40 +282,40 @@ void test_advanced_mul(int* sizes, int sizes_count, int test_count, const char* 
         
         // 测试平凡算法 - 累计所有测试时间
         double total_time_naive = 0.0;
-        for (int t = 0; t < actual_test_count; t++) {
+        for (int t = 0; t < test_count; t++) {
             double start_time = get_time();
             mula(matrix, vector, result_naive, n);
             total_time_naive += (get_time() - start_time);
             
             // 输出进度
-            if ((t+1) % 10 == 0 || t == actual_test_count-1) {
-                cout << "  平凡算法进度: " << t+1 << "/" << actual_test_count << endl;
+            if ((t+1) % 10 == 0 || t == test_count-1) {
+                cout << "  平凡算法进度: " << t+1 << "/" << test_count << endl;
             }
         }
         
         // 测试4路循环展开 - 累计所有测试时间
         double total_time_unroll4 = 0.0;
-        for (int t = 0; t < actual_test_count; t++) {
+        for (int t = 0; t < test_count; t++) {
             double start_time = get_time();
             mulc(matrix, vector, result_unroll4, n);
             total_time_unroll4 += (get_time() - start_time);
             
             // 输出进度
-            if ((t+1) % 10 == 0 || t == actual_test_count-1) {
-                cout << "  4路展开算法进度: " << t+1 << "/" << actual_test_count << endl;
+            if ((t+1) % 10 == 0 || t == test_count-1) {
+                cout << "  4路展开算法进度: " << t+1 << "/" << test_count << endl;
             }
         }
         
         // 测试8路循环展开 - 累计所有测试时间
         double total_time_unroll8 = 0.0;
-        for (int t = 0; t < actual_test_count; t++) {
+        for (int t = 0; t < test_count; t++) {
             double start_time = get_time();
             muld(matrix, vector, result_unroll8, n);
             total_time_unroll8 += (get_time() - start_time);
             
             // 输出进度
-            if ((t+1) % 10 == 0 || t == actual_test_count-1) {
-                cout << "  8路展开算法进度: " << t+1 << "/" << actual_test_count << endl;
+            if ((t+1) % 10 == 0 || t == test_count-1) {
+                cout << "  8路展开算法进度: " << t+1 << "/" << test_count << endl;
             }
         }
         
@@ -372,20 +361,55 @@ void test_advanced_mul(int* sizes, int sizes_count, int test_count, const char* 
 int main() {
     srand(time(NULL));
     
-    // 测试的矩阵大小 - 从小到大
-    int sizes[] = {50, 100, 200,300, 500, 700,1000, 1500, 2000,2500, 3000, 4000,5000, 6000, 7000};
-    int sizes_count = sizeof(sizes) / sizeof(sizes[0]);
+    // 设置测试规模为1到1500的每个整数
+    vector<int> test_sizes;
+    vector<int> test_counts;  // 对应每个规模的测试次数
     
-    int test_count = 50;  // 每个规模测试50次
-    
+    // 从1到1500的每个数
+    for (int i = 1; i <= 1500; i+=5) {
+        test_sizes.push_back(i);
+        
+        // 根据规模设置测试次数，平衡测试时间和精度
+        if (i <= 20) {
+            test_counts.push_back(200);      // 非常小的矩阵，测试200次
+        } else if (i <= 50) {
+            test_counts.push_back(150);      // 很小的矩阵，测试150次
+        } else if (i <= 100) {
+            test_counts.push_back(100);      // 小矩阵，测试100次
+        } else if (i <= 250) {
+            test_counts.push_back(50);       // 中小矩阵，测试50次
+        } else if (i <= 500) {
+            test_counts.push_back(30);       // 中等矩阵，测试30次
+        } else if (i <= 750) {
+            test_counts.push_back(20);       // 中大矩阵，测试20次
+        } else if (i <= 1000) {
+            test_counts.push_back(15);       // 大矩阵，测试15次
+        } else {
+            test_counts.push_back(10);       // 超大矩阵，测试10次
+        }
+    }
+
+    // 将vector转换为数组
+    int sizes_count = test_sizes.size();
+    int* sizes = new int[sizes_count];
+    int* counts = new int[sizes_count];
+    for (int i = 0; i < sizes_count; i++) {
+        sizes[i] = test_sizes[i];
+        counts[i] = test_counts[i];
+    }
+
     cout << "========== 矩阵向量乘法性能优化测试 ==========" << endl;
-    cout << "从小规模到大规模递增测试，每个规模测试" << test_count << "次" << endl;
-    
+    cout << "从1到1500，每个规模都测试，共" << sizes_count << "个规模，测试次数因规模而异" << endl;
+
     // 测试基础算法：平凡算法vs缓存优化
-    test_basic_mul(sizes, sizes_count, test_count, "jichu_matrix.csv");
+    test_basic_mul(sizes, counts, sizes_count, "jichu_matrix.csv");
     
     // 测试进阶算法：平凡算法vs循环展开
-    test_advanced_mul(sizes, sizes_count, test_count, "jinjie_matrix.csv");
+    test_advanced_mul(sizes, counts, sizes_count, "jinjie_matrix.csv");
+    
+    // 释放动态分配的内存
+    delete[] sizes;
+    delete[] counts;
     
     return 0;
 }

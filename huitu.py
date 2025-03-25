@@ -127,56 +127,11 @@ def jinjie_sum():
     plt.close()
 
 
-def jichu_speedup():
-    df = pd.read_csv('jichu_matrix.csv')
-    df = df[df['矩阵大小'] <= 5000]
-
-    plt.figure(figsize=(12, 8))
-    set_plot_style()
-
-    x = df['矩阵大小']
-    colors = ['#2C3E50', '#E74C3C']  # 深蓝和红色
-    for (col, color, label) in [('Cache优化(秒)', colors[1], 'Cache优化')]:
-        speedup = df['平凡算法(秒)'] / df[col]
-        x_smooth, y_smooth = smooth_curve(x, speedup)
-        plt.plot(x_smooth, y_smooth, color=color, linewidth=3, label=label)
-        plt.scatter(x, speedup, color=color, s=60, alpha=0.6, edgecolor='white')
-
-    plt.title('基础矩阵乘法加速比对比', fontsize=16, pad=20)
-    plt.xlabel('矩阵大小', fontsize=14)
-    plt.ylabel('加速比', fontsize=14)
-    plt.legend(fontsize=12, framealpha=0.8)
-    plt.tight_layout()
-    plt.savefig('jichu_speedup_2.jpg', dpi=300, bbox_inches='tight')
-    plt.close()
-
-
-def jinjie_speedup():
-    df = pd.read_csv('jinjie_matrix.csv')
-    plt.figure(figsize=(12, 8))
-    set_plot_style()
-
-    colors = ['#2C3E50', '#E74C3C', '#27AE60']
-    for (col, color, label) in [('4路展开(秒)', colors[1], '4路展开'),
-                               ('8路展开(秒)', colors[2], '8路展开')]:
-        speedup = df['平凡算法(秒)'] / df[col]
-        x_smooth, y_smooth = smooth_curve(df['矩阵大小'], speedup)
-        plt.plot(x_smooth, y_smooth, color=color, linewidth=3, label=label)
-        plt.scatter(df['矩阵大小'], speedup, color=color, s=60, alpha=0.6, edgecolor='white')
-
-    plt.title('进阶矩阵乘法加速比对比', fontsize=16, pad=20)
-    plt.xlabel('矩阵大小', fontsize=14)
-    plt.ylabel('加速比', fontsize=14)
-    plt.legend(fontsize=12, framealpha=0.8)
-    plt.tight_layout()
-    plt.savefig('jinjie_speedup_2.jpg', dpi=300, bbox_inches='tight')
-    plt.close()
-
-
 # Generate all plots
 jichu_matrix()
 jichu_sum()
 jinjie_matrix()
 jinjie_sum()
-jichu_speedup()
-jinjie_speedup()
+
+
+

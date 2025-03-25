@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include<vector>
 
 using namespace std;
 
@@ -50,17 +51,29 @@ double sum_two_way(double* arr, int n) {
     return sum1 + sum2;
 }
 
-// 递归两两相加
-double sum_recursive(double* arr, int start, int end) {
-    if (start == end) {
-        return arr[start];
-    }
-    if (start + 1 == end) {
-        return arr[start] + arr[end];
+// 递归两两相加实现为基于规约的算法
+double sum_reduction(double* arr, int n) {
+    // 创建一个临时数组用于存储中间结果
+    double* temp = new double[n];
+    memcpy(temp, arr, n * sizeof(double)); // 复制原始数据
+    
+    // 按照伪代码实现规约
+    for (int m = n; m > 1; m /= 2) {
+        // 处理每一对元素
+        for (int i = 0; i < m / 2; i++) {
+            temp[i] = temp[i * 2] + temp[i * 2 + 1];
+        }
+        
+        // 如果是奇数，需要特殊处理最后一个元素
+        if (m % 2 == 1 && m > 2) {
+            temp[m/2 - 1] += temp[m-1];
+        }
     }
     
-    int mid = start + (end - start) / 2;
-    return sum_recursive(arr, start, mid) + sum_recursive(arr, mid + 1, end);
+    double result = temp[0]; // 结果在第一个元素
+    delete[] temp; // 释放临时数组
+    
+    return result;
 }
 
 // 4路循环展开
@@ -137,18 +150,10 @@ void test_basic_sum(int* sizes, int sizes_count, int test_count, const char* out
         
         bool correct_two_way = abs(naive_result - two_way_result) < 1e-10;
         
-        // 递归算法对大规模数组可能溢出，先验证是否可行
-        bool recursive_feasible = n <= 100000;  // 对大规模限制递归
+        // 验证规约算法正确性
         bool correct_recursive = false;
-        
-        if (recursive_feasible) {
-            try {
-                double recursive_result = sum_recursive(arr, 0, n - 1);
-                correct_recursive = abs(naive_result - recursive_result) < 1e-10;
-            } catch (...) {
-                recursive_feasible = false;
-            }
-        }
+        double recursive_result = sum_reduction(arr, n);
+        correct_recursive = abs(naive_result - recursive_result) < 1e-10;
         
         // 测试平凡算法 - 累计所有测试时间
         double total_time_naive = 0.0;
@@ -178,73 +183,47 @@ void test_basic_sum(int* sizes, int sizes_count, int test_count, const char* out
         
         // 测试递归算法 - 累计所有测试时间
         double total_time_recursive = 0.0;
-        if (recursive_feasible) {
-            for (int t = 0; t < actual_test_count; t++) {
-                double start_time = get_time();
-                volatile double res = sum_recursive(arr, 0, n - 1);
-                total_time_recursive += (get_time() - start_time);
-                
-                // 输出进度
-                if ((t+1) % 10 == 0 || t == actual_test_count-1) {
-                    cout << "  递归算法进度: " << t+1 << "/" << actual_test_count << endl;
-                }
+        for (int t = 0; t < actual_test_count; t++) {
+            double start_time = get_time();
+            volatile double res = sum_reduction(arr, n);
+            total_time_recursive += (get_time() - start_time);
+            
+            // 输出进度
+            if ((t+1) % 10 == 0 || t == actual_test_count-1) {
+                cout << "  递归算法进度: " << t+1 << "/" << actual_test_count << endl;
             }
         }
         
         // 计算加速比
         double speedup_two_way = total_time_naive / total_time_two_way;
-        double speedup_recursive = recursive_feasible ? (total_time_naive / total_time_recursive) : 0.0;
+        double speedup_recursive = total_time_naive / total_time_recursive;
         
         string correctness = "";
-        if (correct_two_way && (recursive_feasible ? correct_recursive : true)) {
+        if (correct_two_way && correct_recursive) {
             correctness = "正确";
         } else {
             correctness = "错误";
             if (!correct_two_way) correctness += "-两路";
-            if (recursive_feasible && !correct_recursive) correctness += "-递归";
+            if (!correct_recursive) correctness += "-递归";
         }
         
         // 输出结果到控制台
         cout << n << "\t" 
              << fixed << setprecision(6) << total_time_naive << "\t\t" 
-             << total_time_two_way << "\t\t";
-        
-        if (recursive_feasible) {
-            cout << total_time_recursive << "\t\t";
-        } else {
-            cout << "N/A\t\t";
-        }
-        
-        cout << setprecision(2) << speedup_two_way << "x\t\t";
-        
-        if (recursive_feasible) {
-            cout << speedup_recursive << "x\t\t";
-        } else {
-            cout << "N/A\t\t";
-        }
-        
-        cout << correctness << endl;
+             << total_time_two_way << "\t\t"
+             << total_time_recursive << "\t\t"
+             << setprecision(2) << speedup_two_way << "x\t\t"
+             << speedup_recursive << "x\t\t"
+             << correctness << endl;
         
         // 写入CSV文件
         out_file << n << "," 
                  << fixed << setprecision(6) << total_time_naive << "," 
-                 << total_time_two_way << ",";
-        
-        if (recursive_feasible) {
-            out_file << total_time_recursive;
-        } else {
-            out_file << "N/A";
-        }
-        
-        out_file << "," << setprecision(3) << speedup_two_way << ",";
-        
-        if (recursive_feasible) {
-            out_file << speedup_recursive;
-        } else {
-            out_file << "N/A";
-        }
-        
-        out_file << "," << correctness << endl;
+                 << total_time_two_way << ","
+                 << total_time_recursive << ","
+                 << setprecision(3) << speedup_two_way << ","
+                 << speedup_recursive << ","
+                 << correctness << endl;
         
         // 释放内存
         delete[] arr;
@@ -374,20 +353,61 @@ void test_advanced_sum(int* sizes, int sizes_count, int test_count, const char* 
 int main() {
     srand(time(NULL));
     
-    // 测试的数组大小 - 减少最大规模以加快测试
-    int sizes[] = {100, 500, 1000,5000, 10000, 50000,100000, 250000, 500000,1000000, 2500000, 5000000,10000000, 20000000, 30000000};
-    int sizes_count = sizeof(sizes) / sizeof(sizes[0]);
+     // 根据不同规模范围设置更细致的测试规模
+     vector<int> test_sizes;
+    
+     // 极小数组 - 从100到1000，步长100
+     for (int i = 100; i <= 1000; i += 100) {
+         test_sizes.push_back(i);
+     }
+     
+     // 小数组 - 从1K到10K，步长250
+     for (int i = 1000; i <= 10000; i += 250) {
+         if (i != 1000) test_sizes.push_back(i); // 避免重复添加1000
+     }
+     
+     // 小到中等数组 - 从10K到32K，步长500
+     for (int i = 10000; i <= 32000; i += 500) {
+         if (i != 10000) test_sizes.push_back(i); // 避免重复添加10000
+     }
+     
+     // 中等数组 - 从32K到100K，步长2K
+     for (int i = 32000; i <= 100000; i += 2000) {
+         if (i != 32000) test_sizes.push_back(i); // 避免重复添加32000
+     }
+     
+     // 中到大数组 - 从100K到400K，步长10K
+     for (int i = 100000; i <= 400000; i += 10000) {
+         if (i != 100000) test_sizes.push_back(i); // 避免重复添加100000
+     }
+     
+     // 大数组 - 从400K到2M，步长50K
+     for (int i = 400000; i <= 2000000; i += 50000) {
+         if (i != 400000) test_sizes.push_back(i); // 避免重复添加400000
+     }
+     
+     // 超大数组 - 从2M到10M，步长250K
+     for (int i = 2000000; i <= 10000000; i += 250000) {
+         if (i != 2000000) test_sizes.push_back(i); // 避免重复添加2000000
+     }
+     
+     // 将vector转换为数组
+     int sizes_count = test_sizes.size();
+     int* sizes = new int[sizes_count];
+     for (int i = 0; i < sizes_count; i++) {
+         sizes[i] = test_sizes[i];
+     }
     
     int test_count = 50;  // 每个规模测试50次
     
     cout << "========== 数组求和算法性能测试 ==========" << endl;
-    cout << "从小规模到大规模递增测试，每个规模测试" << test_count << "次" << endl;
+    cout << "从小规模到大规模递增测试，共" << sizes_count << "个规模，每个规模测试" << test_count << "次" << endl;
     
     // 基础算法测试
     test_basic_sum(sizes, sizes_count, test_count, "jichu_sum.csv");
     
     // 进阶算法测试
     test_advanced_sum(sizes, sizes_count, test_count, "jinjie_sum.csv");
-    
+    delete[] sizes;
     return 0;
 }
