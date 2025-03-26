@@ -5,7 +5,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
-#include<vector>
+#include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -51,29 +52,21 @@ double sum_two_way(double* arr, int n) {
     return sum1 + sum2;
 }
 
-// 递归两两相加实现为基于规约的算法
+// 原地递归规约算法 - 直接修改输入数组
 double sum_reduction(double* arr, int n) {
-    // 创建一个临时数组用于存储中间结果
-    double* temp = new double[n];
-    memcpy(temp, arr, n * sizeof(double)); // 复制原始数据
-    
-    // 按照伪代码实现规约
-    for (int m = n; m > 1; m /= 2) {
-        // 处理每一对元素
-        for (int i = 0; i < m / 2; i++) {
-            temp[i] = temp[i * 2] + temp[i * 2 + 1];
+    int m = n;
+    while (m > 1) {
+        int half = m / 2;
+        for (int i = 0; i < half; i++) {
+            arr[i] += arr[i + half]; 
         }
-        
-        // 如果是奇数，需要特殊处理最后一个元素
-        if (m % 2 == 1 && m > 2) {
-            temp[m/2 - 1] += temp[m-1];
+        // 处理奇数
+        if (m % 2 == 1) {
+            arr[0] += arr[m-1];
         }
+        m = half;
     }
-    
-    double result = temp[0]; // 结果在第一个元素
-    delete[] temp; // 释放临时数组
-    
-    return result;
+    return arr[0];
 }
 
 // 4路循环展开
@@ -150,10 +143,13 @@ void test_basic_sum(int* sizes, int sizes_count, int test_count, const char* out
         
         bool correct_two_way = abs(naive_result - two_way_result) < 1e-10;
         
-        // 验证规约算法正确性
+        // 验证规约算法正确性 - 为规约算法创建数组副本
         bool correct_recursive = false;
-        double recursive_result = sum_reduction(arr, n);
+        double* arr_copy = new double[n];
+        memcpy(arr_copy, arr, n * sizeof(double));
+        double recursive_result = sum_reduction(arr_copy, n);
         correct_recursive = abs(naive_result - recursive_result) < 1e-10;
+        delete[] arr_copy;
         
         // 测试平凡算法 - 累计所有测试时间
         double total_time_naive = 0.0;
@@ -182,10 +178,16 @@ void test_basic_sum(int* sizes, int sizes_count, int test_count, const char* out
         }
         
         // 测试递归算法 - 累计所有测试时间
+        // 为每次测试创建数组副本
         double total_time_recursive = 0.0;
+        double* arr_temp = new double[n]; // 用于递归算法的临时数组
+        
         for (int t = 0; t < actual_test_count; t++) {
+            // 为每次测试创建数组副本
+            memcpy(arr_temp, arr, n * sizeof(double));
+            
             double start_time = get_time();
-            volatile double res = sum_reduction(arr, n);
+            volatile double res = sum_reduction(arr_temp, n);
             total_time_recursive += (get_time() - start_time);
             
             // 输出进度
@@ -193,6 +195,8 @@ void test_basic_sum(int* sizes, int sizes_count, int test_count, const char* out
                 cout << "  递归算法进度: " << t+1 << "/" << actual_test_count << endl;
             }
         }
+        
+        delete[] arr_temp; // 释放临时数组
         
         // 计算加速比
         double speedup_two_way = total_time_naive / total_time_two_way;
@@ -353,61 +357,99 @@ void test_advanced_sum(int* sizes, int sizes_count, int test_count, const char* 
 int main() {
     srand(time(NULL));
     
-     // 根据不同规模范围设置更细致的测试规模
-     vector<int> test_sizes;
+    // 根据不同规模范围设置2的幂次方测试规模
+    vector<int> test_sizes;
+
+    // 小规模：2^7(128) 到 2^13(8192)
+    for (int i = 7; i <= 13; i++) {
+        test_sizes.push_back(1 << i);  // 2的幂
+    }
     
-     // 极小数组 - 从100到1000，步长100
-     for (int i = 100; i <= 1000; i += 100) {
-         test_sizes.push_back(i);
-     }
-     
-     // 小数组 - 从1K到10K，步长250
-     for (int i = 1000; i <= 10000; i += 250) {
-         if (i != 1000) test_sizes.push_back(i); // 避免重复添加1000
-     }
-     
-     // 小到中等数组 - 从10K到32K，步长500
-     for (int i = 10000; i <= 32000; i += 500) {
-         if (i != 10000) test_sizes.push_back(i); // 避免重复添加10000
-     }
-     
-     // 中等数组 - 从32K到100K，步长2K
-     for (int i = 32000; i <= 100000; i += 2000) {
-         if (i != 32000) test_sizes.push_back(i); // 避免重复添加32000
-     }
-     
-     // 中到大数组 - 从100K到400K，步长10K
-     for (int i = 100000; i <= 400000; i += 10000) {
-         if (i != 100000) test_sizes.push_back(i); // 避免重复添加100000
-     }
-     
-     // 大数组 - 从400K到2M，步长50K
-     for (int i = 400000; i <= 2000000; i += 50000) {
-         if (i != 400000) test_sizes.push_back(i); // 避免重复添加400000
-     }
-     
-     // 超大数组 - 从2M到10M，步长250K
-     for (int i = 2000000; i <= 10000000; i += 250000) {
-         if (i != 2000000) test_sizes.push_back(i); // 避免重复添加2000000
-     }
-     
-     // 将vector转换为数组
-     int sizes_count = test_sizes.size();
-     int* sizes = new int[sizes_count];
-     for (int i = 0; i < sizes_count; i++) {
-         sizes[i] = test_sizes[i];
-     }
+    // L1缓存临界点：512KB约等于64K个双精度数
+    // L1缓存临界点附近(60K-70K)细粒度采样
+    int l1_start = 60000;
+    int l1_end = 70000;
+    int l1_step = 1000;
+    
+    // 找到最接近L1临界点的2的幂
+    int l1_pow2 = 1 << 16;  // 2^16 = 65536
+    test_sizes.push_back(l1_pow2);
+    
+    // 添加L1临界点周围的额外采样点
+    for (int i = l1_start; i <= l1_end; i += l1_step) {
+        if (i != l1_pow2) {  // 避免重复添加2的幂点
+            test_sizes.push_back(i);
+        }
+    }
+    
+    // 中等规模：2^17(131072) 到 2^19(524288)
+    for (int i = 17; i <= 19; i++) {
+        test_sizes.push_back(1 << i);
+    }
+    
+    // L2缓存临界点：8MB约等于1M个双精度数
+    // L2缓存临界点附近(950K-1050K)细粒度采样
+    int l2_start = 950000;
+    int l2_end = 1050000;
+    int l2_step = 10000;
+    
+    // 找到最接近L2临界点的2的幂
+    int l2_pow2 = 1 << 20;  // 2^20 = 1048576
+    test_sizes.push_back(l2_pow2);
+    
+    // 添加L2临界点周围的额外采样点
+    for (int i = l2_start; i <= l2_end; i += l2_step) {
+        if (i != l2_pow2) {  // 避免重复添加2的幂点
+            test_sizes.push_back(i);
+        }
+    }
+    
+    // 大规模：2^21(2097152) 到 2^22(4194304)
+    for (int i = 21; i <= 22; i++) {
+        test_sizes.push_back(1 << i);
+    }
+    
+    // L3缓存临界点：16MB约等于2M个双精度数
+    // L3缓存临界点附近(1.95M-2.05M)细粒度采样
+    int l3_start = 1950000;
+    int l3_end = 2050000;
+    int l3_step = 10000;
+    
+    // 添加L3临界点周围的额外采样点
+    for (int i = l3_start; i <= l3_end; i += l3_step) {
+        if (i != (1 << 21)) {  // 避免重复添加2的幂点
+            test_sizes.push_back(i);
+        }
+    }
+    
+    // 超大规模：2^23(8388608) 到 2^25(33554432)
+    for (int i = 23; i <= 25; i++) {
+        test_sizes.push_back(1 << i);
+    }
+    
+    // 将vector转换为数组
+    int sizes_count = test_sizes.size();
+    int* sizes = new int[sizes_count];
+    for (int i = 0; i < sizes_count; i++) {
+        sizes[i] = test_sizes[i];
+    }
+    
+    // 对规模排序，确保按大小顺序测试
+    sort(sizes, sizes + sizes_count);
     
     int test_count = 50;  // 每个规模测试50次
     
     cout << "========== 数组求和算法性能测试 ==========" << endl;
-    cout << "从小规模到大规模递增测试，共" << sizes_count << "个规模，每个规模测试" << test_count << "次" << endl;
+    cout << "使用2的幂次方规模测试，并在缓存临界点周围进行细粒度采样" << endl;
+    cout << "共" << sizes_count << "个规模，每个规模测试" << test_count << "次" << endl;
+    cout << "L1缓存临界点(~64K), L2缓存临界点(~1M), L3缓存临界点(~2M)" << endl;
     
     // 基础算法测试
     test_basic_sum(sizes, sizes_count, test_count, "jichu_sum.csv");
     
     // 进阶算法测试
     test_advanced_sum(sizes, sizes_count, test_count, "jinjie_sum.csv");
+    
     delete[] sizes;
     return 0;
 }

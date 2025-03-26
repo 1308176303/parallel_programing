@@ -361,34 +361,68 @@ void test_advanced_mul(int* sizes, int* test_counts, int sizes_count, const char
 int main() {
     srand(time(NULL));
     
-    // 设置测试规模为1到1500的每个整数
+    // 定义测试规模和对应的测试次数
     vector<int> test_sizes;
-    vector<int> test_counts;  // 对应每个规模的测试次数
+    vector<int> test_counts;
     
-    // 从1到1500的每个数
-    for (int i = 1; i <= 1500; i+=5) {
+    for (int i = 1; i <= 10; i += 1) {
         test_sizes.push_back(i);
-        
-        // 根据规模设置测试次数，平衡测试时间和精度
-        if (i <= 20) {
-            test_counts.push_back(200);      // 非常小的矩阵，测试200次
-        } else if (i <= 50) {
-            test_counts.push_back(150);      // 很小的矩阵，测试150次
-        } else if (i <= 100) {
-            test_counts.push_back(100);      // 小矩阵，测试100次
-        } else if (i <= 250) {
-            test_counts.push_back(50);       // 中小矩阵，测试50次
-        } else if (i <= 500) {
-            test_counts.push_back(30);       // 中等矩阵，测试30次
-        } else if (i <= 750) {
-            test_counts.push_back(20);       // 中大矩阵，测试20次
-        } else if (i <= 1000) {
-            test_counts.push_back(15);       // 大矩阵，测试15次
-        } else {
-            test_counts.push_back(10);       // 超大矩阵，测试10次
-        }
+        test_counts.push_back(200);      // 非常小的矩阵，测试200次
     }
-
+    // 超小矩阵 - 从1到100，步长10
+    for (int i = 11; i <= 100; i += 4) {
+        test_sizes.push_back(i);
+        test_counts.push_back(200);      // 非常小的矩阵，测试200次
+    }
+    
+    // 小矩阵 - 从110到200，步长10
+    for (int i = 110; i <= 200; i += 10) {
+        test_sizes.push_back(i);
+        test_counts.push_back(150);      // 很小的矩阵，测试150次
+    }
+    
+    // L1缓存临界点附近(240-260)细粒度采样 - L1缓存约512KB，矩阵临界点约250
+    for (int i = 240; i <= 260; i += 1) {
+        test_sizes.push_back(i);
+        test_counts.push_back(100);      // L1缓存临界点，适当测试次数
+    }
+    
+    // 中小矩阵 - 从280到500，步长20
+    for (int i = 280; i <= 500; i += 20) {
+        test_sizes.push_back(i);
+        test_counts.push_back(50);       // 中小矩阵，测试50次
+    }
+    
+    // 中等矩阵 - 从550到800，步长50
+    for (int i = 550; i <= 800; i += 20) {
+        test_sizes.push_back(i);
+        test_counts.push_back(30);       // 中等矩阵，测试30次
+    }
+    
+    // L2缓存临界点附近(950-1050)细粒度采样 - L2缓存约8MB，矩阵临界点约1000
+    for (int i = 990; i <= 1010; i += 1) {
+        test_sizes.push_back(i);
+        test_counts.push_back(20);       // L2缓存临界点，降低测试次数
+    }
+    
+    // 大矩阵 - 从1100到1300，步长50
+    for (int i = 1100; i <= 1300; i += 50) {
+        test_sizes.push_back(i);
+        test_counts.push_back(15);       // 大矩阵，测试15次
+    }
+    
+    // L3缓存临界点附近(1400-1440)细粒度采样 - L3缓存约16MB，矩阵临界点约1420
+    for (int i = 1400; i <= 1440; i += 2) {
+        test_sizes.push_back(i);
+        test_counts.push_back(10);       // L3缓存临界点，最少测试次数
+    }
+    
+    // 超大矩阵 - 从1450到1700，步长50
+    for (int i = 1450; i <= 1700; i += 50) {
+        test_sizes.push_back(i);
+        test_counts.push_back(5);        // 超大矩阵，最少测试次数
+    }
+    
     // 将vector转换为数组
     int sizes_count = test_sizes.size();
     int* sizes = new int[sizes_count];
@@ -399,7 +433,8 @@ int main() {
     }
 
     cout << "========== 矩阵向量乘法性能优化测试 ==========" << endl;
-    cout << "从1到1500，每个规模都测试，共" << sizes_count << "个规模，测试次数因规模而异" << endl;
+    cout << "优化测试规模方案，专注于缓存临界点，共" << sizes_count << "个规模点" << endl;
+    cout << "L1缓存临界点(~250), L2缓存临界点(~1000), L3缓存临界点(~1420)" << endl;
 
     // 测试基础算法：平凡算法vs缓存优化
     test_basic_mul(sizes, counts, sizes_count, "jichu_matrix.csv");
